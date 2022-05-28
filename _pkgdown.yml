@@ -2,3 +2,15 @@ url: ~
 template:
   bootstrap: 5
 
+navbar:
+  structure:
+    left:  [intro, articles]
+    right: [search, github]
+  components:
+    articles:
+      text: Endpoints
+      menu:
+      - text: Hypoglycemia
+        href: articles/hypo.html
+      - text: Sepsis
+        href: articles/sep.html
