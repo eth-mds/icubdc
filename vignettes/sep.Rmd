@@ -1,19 +1,320 @@
 ---
-title: "Sepsis"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{Sepsis}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+title: "Sepsis-3"
+output: 
+  html_document:
+    number_sections: true
+    theme: cerulean
+bibliography: ../docs/sepsis3.bib
+csl: ../docs/biomed-central.csl
+header-includes: 
+  - \usepackage{tikz}
+  - \usepackage{pgfplots}
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
+<style type="text/css">
+
+body{ /* Normal  */
+      font-size: 16px;
+  }
+td {  /* Table  */
+  font-size: 8px;
+}
+h1.title {
+  font-size: 38px;
+  color: DarkRed;
+}
+h1 { /* Header 1 */
+  font-size: 28px;
+  color: DarkBlue;
+}
+h2 { /* Header 2 */
+    font-size: 22px;
+  color: DarkBlue;
+}
+h3 { /* Header 3 */
+  font-size: 18px;
+  font-family: "Times New Roman", Times, serif;
+  color: DarkBlue;
+}
+code.r{ /* Code block */
+    font-size: 10px;
+}
+pre { /* Code block - determines code spacing between lines */
+    font-size: 14px;
+}
+</style>
+
+```{r setup-hypo, include = FALSE}
+options(kableExtra.latex.load_packages = FALSE)
+library(kableExtra)
+library(ggplot2)
+library(cowplot)
+library(ricu)
+library(data.table)
+
+root <- rprojroot::find_root(rprojroot::has_file(".gitignore"))
+invisible(lapply(list.files(file.path(root, "..", "r"), full.names = TRUE), source))
+
+Sys.setenv(RICU_CONFIG_PATH = file.path(root, "..", "config"))
 ```
 
-```{r setup}
-library(icubdc)
+# Medical Background
+
+Sepsis is a life-threatening reaction to an infection that causes damage to different tissues and organs in the body. It remains a major public health issue associated with high mortality, morbidity, and related health costs [@dellinger2013;@hotchkiss2016;@kaukonen2014;@peake2007]. The current clinical gold standard for identifying sepsis is the so-called Sepsis-3 consensus, which highlighted the central role of organ dysfunction in the definition, identification, prognostication, and pathophysiological understanding of sepsis [@singer2016]. 
+
+After a sepsis onset, delay in effective antimicrobial therapy, significantly increases mortality [ferrer2014, pruinelli2018, seymour2017]. Furthermore, sepsis is a complex and heterogeneous syndrome, potentially reversible in its early stages, yet difficult to identify, while its more advanced stages become easier to recognize, but also more challenging to successfully treat [@levy2018, @rhodes2017]. Unfortunately, identifying bacterial species in blood samples can take up to 48 hours [@osthoff2017], causing significant and potentially detrimental delays in confirming a suspected infection. Meanwhile, an abundance of clinical and laboratory data is being routinely collected, the richest set of which is accumulated in the intensive care unit (ICU). While it has become harder for intensivists to manually process the increasing quantities of patient information [@pickering2013], machine learning (ML) systems have the potential to leverage this data in order to provide alarm systems that can aid the clinician in recognizing sepsis in its early stages, which can possibly lead to 
+earlier treatment and better patient outcomes in the ICU.
+
+---
+
+# Suggested Prediction Problem
+
+According to sepsis-3 consensus, sepsis is defined by the co-occurrence of the following two:
+
+(i) suspected infection (defined as antibiotic treatment and body fluid sampling within a specified time window),
+(i) an acute increase in the SOFA [@vincent1996] score which measures the degree of organ dysfunction.
+
+
+```{tikz, fig.cap = "A graphical representation of how a sepsis-3 onset might occur in the ICU.", fig.ext = 'png', echo=FALSE, fig.align="center", fig.width=14}
+\usetikzlibrary{arrows}
+\usetikzlibrary{patterns}
+\usetikzlibrary{decorations.pathreplacing}
+\begin{tikzpicture}[font = \sffamily\Large]
+
+  \draw (-5.5, 0) -- (3.5, 0);
+  \draw (-5.5, -0.2) -- (-5.5, 0.2);
+  \draw (3.5, -0.2) -- (3.5, 0.2);
+  \draw (0.5, -0.2) -- (0.5, 0.2);
+
+  \node[align = center] at (0.5, 0.5) {SI time};
+  \node[align = center] at (3.5, 0.5) {SI window end};
+  \node[align = center] at (-5.5, -0.5) {SI window start};
+
+  \draw (-1.5, -0.2) -- (-1.5, 0.2);
+  \draw[dashed] (-1.5, 2) -- (-1.5, 0);
+  \node[align = center] at (-1.5, -0.5) {Sepsis-3 time};
+
+  \node[align = center] at (-2.75, 0.5) {-48 hours};
+  \node[align = center] at (2, -0.5) {24 hours};
+
+  \draw[dashed] (0.5, 0) -- (0.5, -1);
+
+  \draw (0.5, -1) -- (3.5, -1);
+  \draw (3.5, -1.2) -- (3.5, -0.8);
+  \draw (0.5, -1.2) -- (0.5, -0.8);
+
+  \node at (5.25, -1) {within 24 hours};
+
+  \node[align = center] at (0.5, -1.5) {ABX};
+  \node[align = center] at (3.5, -1.5) {Sampling};
+
+  \draw (0.5, -2) -- (9.5, -2);
+  \draw (9.5, -2.2) -- (9.5, -1.8);
+  \draw (0.5, -2.2) -- (0.5, -1.8);
+
+  \node[align = center] at (5.25, -2.5) {within 72 hours};
+
+  \node[align = center] at (0.5, -2.5) {Sampling};
+  \node[align = center] at (9.5, -2.5) {ABX};
+
+  \draw [decorate, decoration = {brace, mirror, amplitude=5pt, raise=4pt}, yshift=0pt] (0, -0.9) -- (0, -2.1);
+  \node at (-3, -1.5) {Either option is permissible};
+
+  \filldraw  (-6, 1.5) circle (1pt);
+  \draw (-6, 1.5) -- (-5.5, 1.5);
+  \filldraw (-5.5, 1.5) circle (1pt);
+  \draw (-5.5, 1.5) -- (-5, 1);
+  \filldraw (-5, 1) circle (1pt);
+  \draw (-5, 1) -- (-4.5, 1);
+  \filldraw (-4.5, 1) circle (1pt);
+  \draw (-4.5, 1) -- (-4, 1);
+  \filldraw (-4, 1) circle (1pt);
+  \draw (-4, 1) -- (-3.5, 1);
+  \filldraw (-3.5, 1) circle (1pt);
+  \draw (-3.5, 1) -- (-3, 1.5);
+  \filldraw (-3, 1.5) circle (1pt);
+  \draw (-3, 1.5) -- (-2.5, 1.5);
+  \filldraw (-2.5, 1.5) circle (1pt);
+  \draw (-2.5, 1.5) -- (-2, 1.5);
+  \filldraw (-2, 1.5) circle (1pt);
+  \draw (-2, 1.5) -- (-1.5, 2.0);
+  \filldraw (-1.5, 2.0) circle (1pt);
+
+  \draw [decorate,decoration={brace,amplitude=5pt,mirror,raise=4pt},yshift=0pt] (-1.25, 1) -- (-1.25, 2);
+  \node [black] at (0.25, 1.5) {$\Delta$SOFA $\geq 2$};
+
+  \draw (-6.5, 1) -- (-6.5, 2.5);
+  \node at (-6.5, 3) {SOFA};
+  \draw (-6.5, 1) -- (-6.6, 1) node[left]{0};
+  \draw (-6.5, 1.5) -- (-6.6, 1.5) node[left]{1};
+  \draw (-6.5, 2) -- (-6.6, 2) node[left]{2};
+  \draw (-6.5, 2.5) -- (-6.6, 2.5) node[left]{3};
+
+\end{tikzpicture}
 ```
+
+In particular, as the above figure indicates, suspected infection (SI, for short), is defined as:
+
+  - antibiotic administration (labeled ABX) at time $t_{abx}$ followed by body fluid sampling (Sampling, at time $t_{samp}$) within a 24 hour window
+  - body fluid sampling followed by antibiotic administration within a 72 hour window
+  
+The earlier of the two times is taken as the time of suspected infection. Then, a 72 hour window is spanned around the SI time (48 hours prior, 24 hours after). Within this SI window, the level of the SOFA score is monitored, and an increase of 2 or more points defines the onset of sepsis, and this time is labeled $t_{sep3}$ (the earliest such time is taken, if any exists, and subsequent increases are ignored). 
+
+## Sepsis-3 is not a stopping time
+
+The onset of sepsis-3 is not a stopping time [@norris1998markov]. That is, at time when the sepsis-3 onset occurs, it is not necessarily possible to verify that the onset occurred (for example, consider a SOFA increase of 2 points at 0 hours, followed by body fluid sampling at 24 hours, and antibiotic treatment at 48 hours; in this case, the sepsis-3 event occurring at 0 hours is only confirmed 48 hours later).  
+
+The following parameters are especially relevant for the prediction problem:
+\begin{align*}
+  L &= \text{how early prior to onset is the prediction valid} \\
+  R &= \text{how much in advance is the prediction valid} \\
+\end{align*}
+
+We consider the choices of $L = 24$ hours and $R = t_{confirm} := \max\Big(t_{samp}, t_{abx}, t_{sep3}\Big)$ as appropriate. In words, an alarm is considered to be timely if it happens no earlier than 24 hours before the sepsis-3 onset. Furthermore, the alarm is considered to be informative if it happens no later than the time at which sepsis-3 can be definitively confirmed.
+
+Finally, when designing an alarm system, to prevent alarm fatigue, alarms cannot ring too frequently, so we consider using _alarm silencing_, defined by the parameter:
+
+\begin{align*}
+    \delta = \text{duration of alarm silencing after the alarm is raised}
+\end{align*}
+
+For sepsis-3, we consider the fixed value of $\delta = \infty$ hours, meaning that the alarm system is silenced indefinitely after it is raised for the first time.
+
+## Dataset limitations
+
+There are two major data limitations when trying to compute the sepsis-3 labels on the publicly available datasets considered in this repository. In particular, we highlight that:
+
+  - eICU dataset reports body fluid sampling information for only a very small fraction of patients,
+  - HiRID dataset reports no body fluid sampling information.
+
+For this reason, an alternative definition needs to be used for these datasets. The alternative definition requires two or more antibiotic administrations within a 24-hour window.
+
+---
+
+# Reproducible Code
+
+After defining the prediction problem and the key parameters, we provide code that can be used to generate data which is ready for AI prediction models.
+
+```{r, include=TRUE, cache=TRUE, message=FALSE}
+src <- c("mimic_demo", "eicu_demo")
+phys <- c("alt", "alp", "ast", "basos", "bicar", "bili", "ca", "cai", 
+"tco2", "cl", "crea", "dbp", "eos", "fio2", "hr", "hct", "hgb", 
+"inr_pt", "lact", "lymph", "mg", "mch", "mchc", "mcv", "map", 
+"neut", "o2sat", "pco2", "po2", "ph", "phos", "plt", "k", "pt", 
+"ptt", "rdw", "rbc", "resp", "na", "sbp", "bun", "wbc", "temp", 
+"alb", "ck", "etco2", "crp", "gcs", "pafi", "safi", "map_beta50", 
+"map_beta100", "map_beta200", "be", "bili_dir", "bnd", "ckmb", 
+"esr", "fgn", "glu", "bmi", "age")
+
+meds <- c("cortico", "mech_vent", "dex_amount", "ins_ifx")
+
+dat <- lapply(
+  src,
+  function(dat_src) {
+    
+    tbl <- load_concepts(c(phys, meds), dat_src, verbose = FALSE)
+    
+    # carry-forward for physiological variable
+    tbl <- replace_na(fill_gaps(tbl), type = "locf", vars = phys)
+    
+    # 0-imputation for treatment variables
+    tbl <- replace_na(tbl, 0, vars = meds)
+    
+    # obtain onset information
+    sep3 <- sep3_info(dat_src)
+    tbl <- merge(tbl, sep3, all.x = TRUE)
+    
+    # remove times after t_confirm
+    tbl[, t_confirm := max_or_na(t_confirm), by = c(id_vars(tbl))]
+    tbl[is.na(t_confirm), t_confirm := hours(Inf)]
+    tbl <- tbl[get(index_var(tbl)) <= t_confirm]
+    
+    # carry-backward the sepsis-3 label for L = 24 hours
+    tbl <- slide(tbl, sep3_lab := max_or_na(sep3), before = hours(0L), 
+                 after = hours(24L))
+    
+    # carry-forward the sepsis-3 label until t_confirm
+    tbl[is.na(sep3_lab), sep3_lab := 0]
+    tbl[, sep3_lab := cummax(sep3_lab), by = c(id_vars(tbl))]
+    
+    # remove extra columns & times before ICU
+    tbl[, c("sep3", "t_confirm") := NULL]
+    tbl <- tbl[get(index_var(tbl)) >= hours(0L)]
+    
+    # write the data into memory
+    # write_parquet(x = tbl, sink = paste(src, "_sep3.parquet"))
+    list(data = tbl, sep3_info = sep3)
+  }
+) 
+```
+
+The `.parquet` files generated by the above code can be used for training and testing.
+
+# Evaluation Code
+
+After developing the AI model for prediction, a key step is to evaluate its potential clinical utility. For this purpose, we suggest an evaluation scheme, which can be performed using the `patient_eval()` function exposed in our repository. The `data` that needs to be fed into the function should be formatted as follows:
+
+```{r, include=TRUE, echo=FALSE}
+evl_dat <- dat[[1]][["data"]][, c(meta_vars(dat[[1]][["data"]]), "sep3_lab"), 
+                              with=FALSE]
+evl_dat <- head(evl_dat)
+evl_dat[, sep3_prob := runif(6L)]
+evl_dat
+```
+
+In particular, the input to the patient evaluation is a long-format table that contains a column named `sep3_prob` with the probability predictions. The label column `sep3_lab` determines whether it is desired to raise an alarm at this time point. The `patient_eval()` function then computes the sensitivity, specificity and the positive predictive value (PPV) over a range of prediction thresholds, and can be simply ran using the following code:
+
+```{r, include=TRUE, echo=TRUE, eval=FALSE}
+patient_eval(evl_dat, delta = hours(Inf), score_col = "sep3_prob", tpp = "sep3_lab")
+```
+
+# Epidemiology
+
+When consider prediction, the epidemiology of the prediction problem is often very relevant. For this reason, we investigate the following 
+
+  (i) prevalence of sepsis-3 in each dataset,
+  (i) onset times of sepsis-3 in each dataset ($t_{sep3}$),
+  (i) time duration between sepsis-3 onset, and the time at which sepsis-3 is confirmed ($t_{confirm} - t_{sep3}$).
+
+## Prevalence, Onset Times and Confirmation Duration Times
+
+The overall prevalence in each of the datasets is:
+
+```{r prevalenceonset, echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, fig.width=12}
+
+plt <- Map(
+  function(dat_src, dat) {
+
+    sep <- data.table::copy(dat[["sep3_info"]])
+    n_pat <- length(unique(id_col(dat[["data"]])))
+    prv <- 100 * nrow(sep) / n_pat
+    
+    p1 <- ggplot(sep, aes_string(x = index_var(sep))) + geom_density() +
+      theme_bw() + xlab("Time into ICU (hours)") + 
+      ggtitle(
+        paste(
+          "Dataset", dat_src, "onset times (prevalence", round(prv), "%)"
+        )
+      ) + xlim(c(0, 120))
+    
+    sep[, t_diff := t_confirm - get(index_var(sep))]
+    
+    p2 <- ggplot(sep, aes(x = t_diff)) + geom_density() +
+      theme_bw() + xlab("Time between onset and confirmation (hours)") + 
+      ggtitle(
+        paste(
+          "Dataset", dat_src, "time until confirmation"
+        )
+      ) + xlim(c(0, 120))
+    
+    cowplot::plot_grid(p1, p2, ncol = 2L)
+    
+  }, src, dat
+)
+
+cowplot::plot_grid(plotlist = plt, ncol = 1L)
+```
+
+# References
+
+<div id="refs"></div>

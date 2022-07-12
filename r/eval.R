@@ -1,5 +1,6 @@
 
-patient_eval <- function(eval, delta, type = "circEWS") {
+patient_eval <- function(eval, delta, type = "circEWS", 
+                         score_col = "prediction", tpp = "label") {
   
   if (!is.element("method", names(eval))) eval$method <- "RF"
   

@@ -200,7 +200,7 @@ evl_dat
 In particular, the input to the patient evaluation is a long-format table that contains a column named `hypo_prob` with the probability predictions. The label column `hypo_lab` determines whether it is desired to raise an alarm at this timepoint. The `patient_eval()` function then computes the sensitivity, specificity and the positive predictive value (PPV) over a range of prediction thresholds, and can be simply ran using the following code:
 
 ```{r, include=TRUE, echo=TRUE, eval=FALSE}
-patient_eval(data, delta = hours(1L))
+patient_eval(data, delta = hours(1L), score_col = "hypo_prob", tpp = "hypo_lab")
 ```
 
 # Epidemiology
