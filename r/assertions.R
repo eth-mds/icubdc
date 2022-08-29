@@ -1,9 +1,6 @@
-
-library(assertthat)
-
+#' @importFrom assertthat assert_that is.scalar is.count is.flag on_failure<-
 is_intish <- function(x) {
-  res <- is.integer(x) || (is.numeric(x) && all(x == trunc(x)) && !is.na(x))
-  res
+  is.integer(x) || (is.numeric(x) && all(x == trunc(x)) && !is.na(x))
 }
 
 on_failure(is_intish) <- function(call, env) {

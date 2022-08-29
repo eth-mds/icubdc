@@ -1,4 +1,5 @@
 
+#' @export
 patient_eval <- function(eval, delta, type = "circEWS", 
                          score_col = "prediction", tpp = "label") {
   
@@ -138,9 +139,9 @@ make_plot <- function(res) {
   
   res[, Delta_auroc := paste0(Delta, " (", round(auroc, 3), ")")]
   res[, Delta_auprc := paste0(Delta, " (", round(auprc, 3), ")")]
-  res[, method_prec := paste0(Method, " (", 
-                              round(prec_shift_module(prec80, res[1][["ppv"]], 
-                                                      0.1), 3), ")")]
+  res[, method_prec := paste0(
+    Method, " (", round(prec_shift(prec80, res[1][["ppv"]],  0.1), 3), ")"
+  )]
   
   roc <- ggplot(res, aes(x = 1-spec, y = sens, linetype = factor(Delta),
                          color = factor(Method))) +
@@ -177,118 +178,8 @@ make_plot <- function(res) {
   
 }
 
-prec_shift_module <- function(prec, prev, target_prev) {
+prec_shift <- function(prec, prev, target_prev) {
   s_1s <- prec / (1 - prec) * (1 - prev) / prev
   target_s_1s <- s_1s *  target_prev / (1 - target_prev)
   target_s_1s / (1 + target_s_1s)
-}
-
-select_job <- function(prefix = "test", jobid = NULL,
-                       res_dir = results_dir()) {
-
-  job_dir <- paste(prefix, jobid, sep = "_")
-
-  cands <- list.dirs(res_dir)
-  cands <- cands[grepl(job_dir, basename(cands))]
-
-  job_dir <- cands[
-    which.max(as.integer(xtr_chr(strsplit(basename(cands), "_"), 2L)))
-  ]
-
-  assert_that(length(job_dir) == 1L)
-
-  job_dir
-}
-
-read_set <- function(run_name, dir = select_job()) {
-
-  assert_that(is.string(run_name))
-
-  if (!grep("\\.set", run_name)) {
-    run_name <- paste0(run_name, ".set")
-  }
-
-  file <- file.path(dir, run_name)
-
-  assert_that(file.exists(file))
-
-  qs::qread(file)
-}
-
-read_sets <- function(run_names = NULL, job_prefix = "test",
-                      dir = select_job(job_prefix)) {
-
-  if (is.null(run_names)) {
-    run_names <- list.files(dir, pattern = "\\.set")
-  }
-
-  lapply(run_names, read_set, dir)
-}
-
-read_pred <- function(run_name, tst_src, meta = list(run_name = run_name),
-                      dir = select_job()) {
-
-  assert_that(is.string(run_name), is.string(tst_src))
-
-  file <- file.path(dir, paste0(run_name, "-", tst_src, ".prd"))
-
-  assert_that(file.exists(file))
-
-  res <- qs::qread(file)
-  res <- res[, c("tst_src", names(meta)) := c(list(tst_src), meta)]
-
-  res
-}
-
-select_sets <- function(sets, ...) {
-
-  args <- list(...)
-  hits <- rep(TRUE, length(sets))
-
-  for (arg in names(args)) {
-    temp <- lapply(sets, `[[`, arg)
-    temp <- vapply(temp, `%in%`, logical(1L), args[[arg]])
-    hits <- hits & temp
-  }
-
-  sets <- sets[hits]
-  names(sets) <- xtr_chr(sets, "run_name")
-
-  lapply(sets, `[`, names(args))
-}
-
-read_preds <- function(trn_src, tst_src = trn_src, ..., job_prefix = "test",
-                       dir = select_job(job_prefix)) {
-
-  ipply <- function(i, fun, x) lapply(x, fun, i)
-
-  sets <- select_sets(read_sets(dir = dir), trn_src = trn_src, ...)
-
-  prms <- expand.grid(run_name = names(sets), tst_src = tst_src,
-                      KEEP.OUT.ATTRS = FALSE, stringsAsFactors = FALSE)
-  prms <- split(prms, seq_len(nrow(prms)))
-  prms <- Map(c, prms, meta = lapply(sets, list), dir = list(dir))
-
-  rbind_lst(lapply(prms, call_do, read_pred))
-}
-
-read_mod <- function(run_name, dir = select_job()) {
-
-  assert_that(is.string(run_name))
-
-  file <- file.path(dir, paste0(run_name, ".mod"))
-
-  assert_that(file.exists(file))
-
-  qs::qread(file)
-}
-
-read_mods <- function(..., job_prefix = "test", dir = select_job(job_prefix)) {
-
-  set <- select_sets(read_sets(dir = dir), ...)
-  res <- lapply(names(set), read_mod, dir)
-
-  names(res) <- set
-
-  res
 }

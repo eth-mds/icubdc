@@ -70,6 +70,7 @@ carry_fwd <- function(x, time = 1L) {
 
 }
 
+#' @export
 srcwrap <- function(src) {
 
   if (length(src) > 1L) {

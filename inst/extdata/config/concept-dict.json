@@ -408,12 +408,5 @@
     "callback": "dex_amount_callback",
     "class": "rec_cncpt",
     "target": "ts_tbl"
-  },
-  "sep3_info": {
-    "concepts": ["sep3", "abx"],
-    "description": "Sepsis-3 onset information",
-    "callback": "sep3_info_cb",
-    "keep_components":[true, false],
-    "class": "rec_cncpt"
   }
 }

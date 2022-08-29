@@ -1,4 +1,5 @@
 
+#' @export
 map_beta <- function(beta) {
 
   assert_that(is.numeric(beta), is.scalar(beta))
@@ -32,11 +33,13 @@ map_beta <- function(beta) {
   }
 }
 
+#' @export
 ins_ifx_cb <- function(ins, interval) {
   if (id_var(ins) == "icustay_id") ins[ins == 0, "ins"] <- 2
   rename_cols(ins, "ins_ifx", "ins")
 }
 
+#' @export
 hypo_cb <- function(glu, ...) {
 
   onset_id <- function(x) replace(x, x, seq_len(sum(x)))
@@ -51,6 +54,7 @@ hypo_cb <- function(glu, ...) {
   glu
 }
 
+#' @export
 hypo_epd <- function(hypo, min_dur = hours(6L), ...) {
   
   mrg <- function(x) cumsum(c(TRUE, x[-length(x)]))
@@ -78,6 +82,7 @@ hypo_epd <- function(hypo, min_dur = hours(6L), ...) {
   hypo
 }
 
+#' @export
 hypo_cnt_cb <- function(hypo_epi, ...) {
   
   hypo_epi <- fill_gaps(hypo_epi)
@@ -90,6 +95,7 @@ hypo_cnt_cb <- function(hypo_epi, ...) {
   
 }
 
+#' @export
 dex_amount_callback <- function(...) {
   x <- list(...)[["dex"]]
   ivl <- list(...)[["interval"]]
@@ -104,6 +110,7 @@ dex_amount_callback <- function(...) {
   expand(x, aggregate = "sum")
 }
 
+#' @export
 ts_to_win_2hours <- function(x, dur_var, ...) {
   x[, c(list(...)$val_var) := NULL]
   x[, c(list(...)$val_var) := TRUE]
@@ -112,6 +119,7 @@ ts_to_win_2hours <- function(x, dur_var, ...) {
   as_win_tbl(x, dur_var = dur_var, by_ref = TRUE)
 }
 
+#' @export
 ts_to_win_6hours <- function(x, dur_var, ...) {
   x[, c(list(...)$val_var) := NULL]
   x[, c(list(...)$val_var) := TRUE]
@@ -120,6 +128,7 @@ ts_to_win_6hours <- function(x, dur_var, ...) {
   as_win_tbl(x, dur_var = dur_var, by_ref = TRUE)
 }
 
+#' @export
 mimic_presc_cort <- function(x, dur_var, ...) {
   x[, c(list(...)$val_var) := NULL]
   x[, c(list(...)$val_var) := TRUE]
@@ -129,6 +138,7 @@ mimic_presc_cort <- function(x, dur_var, ...) {
   as_win_tbl(x, dur_var = dur_var, by_ref = TRUE)
 }
 
+#' @export
 hirid_pharma_win6 <- function(x, dur_var, group_var, ...) {
   
   x[, c(list(...)$val_var) := NULL]
@@ -142,6 +152,7 @@ hirid_pharma_win6 <- function(x, dur_var, group_var, ...) {
   as_win_tbl(x, dur_var = dur_var, by_ref = TRUE)
 }
 
+#' @export
 hirid_pharma_win2 <- function(x, dur_var, group_var, ...) {
   
   x[, c(list(...)$val_var) := NULL]
@@ -155,24 +166,19 @@ hirid_pharma_win2 <- function(x, dur_var, group_var, ...) {
   as_win_tbl(x, dur_var = dur_var, by_ref = TRUE)
 }
 
+#' @export
 aumc_cortico <- function(x, dur_var, ...) {
-  
   x[, c(dur_var) := get(dur_var) + mins(360L)]
-  
+  x
 }
 
-sep3_info_cb <- function(...) {
-  
-  browser()
-  
-}
-
+#' @export
 sep3_info <- function(source, pids = NULL, keep_components = TRUE,
                          dat = NULL) {
   
   if (is.null(dat)) {
     dat <- load_concepts("sofa", source, patient_ids = pids,
-                         keep_components = keep_components)
+                         keep_components = keep_components, verbose = FALSE)
   } else if (!is_ts_tbl(dat)) {
     dat <- data.table::copy(dat[["sofa"]])
   }
@@ -183,13 +189,13 @@ sep3_info <- function(source, pids = NULL, keep_components = TRUE,
     
     si <- load_concepts("susp_inf", source, abx_min_count = 2L,
                         id_type = "icustay", patient_ids = pids,
-                        si_mode = "or", keep_components = keep_components)[
-                          susp_inf == TRUE
-                        ]
+                        si_mode = "or", keep_components = keep_components,
+                        verbose = FALSE)[susp_inf == TRUE]
   } else {
     
     si <- load_concepts("susp_inf", source, id_type = "icustay",
-                        patient_ids = pids, keep_components = keep_components)
+                        patient_ids = pids, keep_components = keep_components,
+                        verbose = FALSE)
   }
   
   sep3_cmp(dat, si, si_window = "any", keep_components = keep_components,
@@ -255,7 +261,7 @@ sep3_cmp <- function (..., si_window = c("first", "last", "any"),
     # go to abx case
     res_abx <- res
     res_abx <- res_abx[, c(id_var(res_abx), "abx_time"), with=F]
-    add_abx <- load_concepts("abx", source, aggregate = "sum")
+    add_abx <- load_concepts("abx", source, aggregate = "sum", verbose = FALSE)
     
     res_abx <- merge(add_abx, res_abx)
     res_abx <- res_abx[(get(index_var(res_abx)) > abx_time) |
