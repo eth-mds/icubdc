@@ -3,3 +3,4 @@
 ^pkgdown$
 ^README\.Rmd$
 ^LICENSE\.md$
+^vignettes/(hypo|sep)_(cache|files)$
