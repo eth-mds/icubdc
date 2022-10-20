@@ -1,0 +1,8 @@
+pandoc: 2.14.2
+pkgdown: 2.0.6
+pkgdown_sha: ~
+articles:
+  hypo: hypo.html
+  sep: sep.html
+last_built: 2022-10-20T19:23Z
+
