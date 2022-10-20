@@ -4,11 +4,15 @@ output:
   html_document:
     number_sections: true
     theme: cerulean
-bibliography: ../docs/sepsis3.bib
-csl: ../docs/biomed-central.csl
+bibliography: '`r system.file("extdata", "sep.bib", package = "icubdc")`'
+csl: '`r system.file("extdata", "biomed-central.csl", package = "icubdc")`'
 header-includes: 
   - \usepackage{tikz}
   - \usepackage{pgfplots}
+vignette: >
+  %\VignetteIndexEntry{Sepsis-3}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 <style type="text/css">

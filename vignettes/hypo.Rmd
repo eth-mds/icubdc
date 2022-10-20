@@ -4,11 +4,15 @@ output:
   html_document:
     number_sections: true
     theme: cerulean
-bibliography: ../docs/hypo.bib
-csl: ../docs/biomed-central.csl
+bibliography: '`r system.file("extdata", "hypo.bib", package = "icubdc")`'
+csl: '`r system.file("extdata", "biomed-central.csl", package = "icubdc")`'
 header-includes: 
   - \usepackage{tikz}
   - \usepackage{pgfplots}
+vignette: >
+  %\VignetteIndexEntry{Hypoglycemia}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 ---
 
 <style type="text/css">
@@ -149,7 +153,7 @@ phys <- c("alt", "alp", "ast", "basos", "bicar", "bili", "ca", "cai",
 "map_beta100", "map_beta200", "be", "bili_dir", "bnd", "ckmb", 
 "esr", "fgn", "glu", "bmi", "age")
 
-meds <- c("TPN", "enteral", "cortico", "mech_vent", "dex_amount", "ins_ifx")
+meds <- c("tpn", "enteral", "cortico", "mech_vent", "dex_amount", "ins_ifx")
 
 dat <- lapply(
   src,
