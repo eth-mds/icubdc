@@ -79,7 +79,11 @@ Patients who enter an intensive care unit (ICU) are monitored for blood glucose
 levels. The commonly used target range for blood glucose in critiically ill patients is between 108 mg/dL and 180 mg/dL. However, instances in which glucose levels drop below $70$ mg/dL are considered dangerous, and it is of interest to prevent them.
 
 
-```{tikz, fig.cap = "A graphical representation of how a hypoglycemic event might occur in the ICU.", fig.ext = "png", echo = FALSE, fig.align = "center", engine.opts=list(extra.preamble = c("\\usepackage{arrows}", "\\usepackage{patterns}", "\\usepackage{decorations.pathreplacing}"))}
+```{tikz, fig.cap = "A graphical representation of how a hypoglycemic event might occur in the ICU.", fig.ext = "png", echo = FALSE, fig.align = "center"}
+
+\usetikzlibrary{arrows}
+\usetikzlibrary{patterns}
+\usetikzlibrary{decorations.pathreplacing}
 
 \begin{tikzpicture}
 
