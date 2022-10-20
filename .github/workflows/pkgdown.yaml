@@ -34,6 +34,7 @@ jobs:
           extra-packages: |
             any::pkgdown
             any::magick
+            any::pdftools
             local::.
             eth-mds/mimic-demo
             eth-mds/eicu-demo

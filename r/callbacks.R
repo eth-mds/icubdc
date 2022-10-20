@@ -40,7 +40,11 @@ map_beta <- function(beta) {
 #' @rdname map_beta
 #' @export
 ins_ifx_cb <- function(ins, ...) {
-  if (id_var(ins) == "icustay_id") ins[ins == 0, "ins"] <- 2
+  if (identical(id_vars(ins), "icustay_id")) {
+    ins[get("ins") == 0, c("ins") := 2]
+  } else if ("source" %in% id_vars(ins)) {
+    ins[get("ins") == 0 & grepl("mimic", get("source")), c("ins") := 2]
+  }
   rename_cols(ins, "ins_ifx", "ins")
 }
 

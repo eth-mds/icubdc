@@ -8,6 +8,26 @@
 #' @export
 sep3_info <- function(source, pids = NULL, keep_components = TRUE,
                       dat = NULL) {
+
+  if (length(source) > 1L) {
+
+    if (is.null(pids)) {
+      pids <- rep(list(NULL), length(source))
+    } else {
+      assert_that(is.list(pids), length(pids) == length(source))
+    }
+
+    if (is.null(dat)) {
+      dat <- rep(list(NULL), length(source))
+    } else{
+      assert_that(is.list(dat), length(dat) == length(source))
+    }
+
+    res <- Map(sep3_info, source, pids, keep_components, dat)
+    res <- Map(ricu:::add_src_col, res, source)
+
+    return(rbind_lst(res))
+  }
   
   if (is.null(dat)) {
     dat <- load_concepts("sofa", source, patient_ids = pids,
