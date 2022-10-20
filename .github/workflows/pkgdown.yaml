@@ -35,6 +35,7 @@ jobs:
             any::pkgdown
             any::magick
             any::pdftools
+            any::units
             local::.
             eth-mds/mimic-demo
             eth-mds/eicu-demo
